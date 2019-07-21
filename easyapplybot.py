@@ -6,14 +6,14 @@ from bs4 import BeautifulSoup
 import pyautogui
 from tkinter import filedialog, Tk
 import os
+from selenium.webdriver.common.keys import Keys
 
 
 class EasyApplyBot:
 
     MAX_APPLICATIONS = 30
 
-    def __init__(self, language):
-        self.language = language
+    def __init__(self):
         self.options = self.browser_options()
         self.browser = webdriver.Chrome(chrome_options=self.options)
         self.start_linkedin()
@@ -26,54 +26,46 @@ class EasyApplyBot:
         return options
 
     def start_linkedin(self):
-        self.browser.get("https://linkedin.com/uas/login")
-
-    def wait_for_login(self):
-        if language == "en":
-            title = "Sign In to LinkedIn"
-        elif language == "pt":
-            title = "Entrar no LinkedIn"
-
-        time.sleep(1)
-
-        while True:
-            if self.browser.title != title:
-                print("\nStarting LinkedIn bot\n")
-                break
-            else:
-                time.sleep(1)
-                print("\nPlease Login to your LinkedIn account\n")
+        self.browser.get("https://linkedin.com/login")
+        self.browser.find_element_by_id('username').send_keys('')
+        #insert email into the string here
+        self.browser.find_element_by_id('password').send_keys('')
+        #insert password into the string here
+        self.browser.find_element_by_id('password').send_keys(Keys.RETURN)
+        self.browser.get('https://www.linkedin.com/jobs/')
 
     def fill_data(self):
         self.browser.set_window_size(0, 0)
         self.browser.set_window_position(2000, 2000)
         os.system("reset")
 
-        position = input('Enter the desired job title : ')
-        self.position = position.replace(" ", "%20")
 
-        print("Location codes: \n[1] GLOBAL\n[2] Country\n[3] State\n[4] City")
-        location_code = input('Enter the location code: ')
-        if location_code == "1":
-            location = "Worldwide"
-        elif location_code == "2":
-            location = input('Enter the country name: ')
-        elif location_code == "3":
-            location = input('Enter the state name: ')
-        elif location_code == "4":
-            location = input('Enter the city name: ')
-        self.location = "&location=" + location.replace(" ", "%20") + "&sortBy=DD"
+        # position = input('Enter the desired job title : ')
+        # self.position = position.replace(" ", "%20")
+        self.position = "web%20developer"
 
-        print("\nPlease select your curriculum\n")
-        time.sleep(1)
-        root = Tk()
-        self.resumeloctn = filedialog.askopenfilename(parent=root, initialdir="/",
-                                                      title='Please select your curriculum')
+        # print("Location codes: \n[1] GLOBAL\n[2] Country\n[3] State\n[4] City")
+        # location_code = input('Enter the location code: ')
+        # if location_code == "1":
+        #     location = "Worldwide"
+        # elif location_code == "2":
+        #     location = input('Enter the country name: ')
+        # elif location_code == "3":
+        #     location = input('Enter the state name: ')
+        # elif location_code == "4":
+        #     location = input('Enter the city name: ')
+        # self.location = "&location=" + location.replace(" ", "%20") + "&sortBy=DD"
+        self.location = "&location=new%20york&sortBy=DD"
 
-        root.destroy()
+        # print("\nPlease select your curriculum\n")
+        # time.sleep(1)
+        # root = Tk()
+        # self.resumeloctn = filedialog.askopenfilename(parent=root, initialdir="/",
+                                                    #   title='Please select your curriculum')
+
+        # root.destroy()
 
     def start_apply(self):
-        self.wait_for_login()
         self.fill_data()
         self.applications_loop()
 
@@ -106,9 +98,30 @@ class EasyApplyBot:
 
                 if self.got_easy_apply(job_page):
                     string_easy = "* has Easy Apply Button"
-                    xpath = self.easy_apply_xpath()
-                    self.click_button(xpath)
-                    self.send_resume()
+                    triggerButton = self.browser.find_element_by_class_name("jobs-apply-button--top-card")
+                    time.sleep(0.5)
+                    triggerButton.click()
+                    time.sleep(1.5)
+                    # self.send_resume()
+                    submitButton = page.find("button", class_="jobs-apply-form__submit-button")
+                    time.sleep(0.5)
+                    hitSubmit = self.browser.find_element_by_class_name("jobs-apply-form__submit-button")
+                    hitSubmit.click()
+                    print("applied")
+
+                    if submitButton:
+                        time.sleep(0.5)
+                        hitSubmit = self.browser.find_element_by_class_name("jobs-apply-form__submit-button")
+                        hitSubmit.click()
+                        string_easy=("applied")
+
+                    else:
+                        findcontinue = page.find("button", class_="continue-btn")
+
+                        if findcontinue:
+                            continuebutton = self.browser.find_element_by_class_name("continue-btn")
+                            continuebutton.click()
+
                     count_application += 1
 
                 else:
@@ -145,40 +158,44 @@ class EasyApplyBot:
         return self.job_page
 
     def got_easy_apply(self, page):
-        button = page.find("button", class_="jobs-s-apply__button js-apply-button")
+        button = page.find("button", class_="jobs-apply-button--top-card artdeco-button--3 artdeco-button--primary jobs-apply-button artdeco-button ember-view")
         return len(str(button)) > 4
 
     def get_easy_apply_button(self):
-        button_class = "jobs-s-apply--top-card jobs-s-apply--fadein inline-flex mr2 jobs-s-apply ember-view"
+        button_class = "jobs-apply-button--top-card artdeco-button--3 artdeco-button--primary jobs-apply-button artdeco-button ember-view"
         button = self.job_page.find("div", class_=button_class)
-        return button
-
-    def easy_apply_xpath(self):
-        button = self.get_easy_apply_button()
-        button_inner_html = str(button)
-        list_of_words = button_inner_html.split()
-        next_word = [word for word in list_of_words if "ember" in word and "id" in word]
-        ember = next_word[0][:-1]
-        xpath = '//*[@'+ember+']/button'
-        return xpath
-
-    def click_button(self, xpath):
-        triggerDropDown = self.browser.find_element_by_xpath(xpath)
+        triggerButton = self.browser.find_element_by_class_name("jobs-apply-button--top-card artdeco-button--3 artdeco-button--primary jobs-apply-button artdeco-button ember-view")
         time.sleep(0.5)
-        triggerDropDown.click()
+        triggerButton.click()
         time.sleep(1.5)
 
-    def send_resume(self):
-        self.browser.find_element_by_xpath('//*[@id="file-browse-input"]').send_keys(self.resumeloctn)
-        submit_button = None
-        time.sleep(1)
-        while not submit_button:
-            if language == "en":
-                submit_button = self.browser.find_element_by_xpath("//*[contains(text(), 'Submit application')]")
-            elif language == "pt":
-                submit_button = self.browser.find_element_by_xpath("//*[contains(text(), 'Enviar candidatura')]")
-        submit_button.click()
-        time.sleep(random.uniform(1.5, 2.5))
+
+    # def easy_apply_xpath(self):
+    #     button = self.get_easy_apply_button()
+    #     button_inner_html = str(button)
+    #     list_of_words = button_inner_html.split()
+    #     next_word = [word for word in list_of_words if "ember" in word and "id" in word]
+    #     ember = next_word[0][:-1]
+    #     xpath = '//*[@'+ember+']/button'
+    #     return xpath
+
+    # def click_button(self, xpath):
+    #     triggerDropDown = self.browser.find_element_by_xpath(xpath)
+    #     time.sleep(0.5)
+    #     triggerDropDown.click()
+    #     time.sleep(1.5)
+
+    # def send_resume(self):
+    #     self.browser.find_element_by_xpath('//*[@id="file-browse-input"]').send_keys(self.resumeloctn)
+    #     submit_button = None
+    #     time.sleep(1)
+    #     while not submit_button:
+    #         if language == "en":
+    #             submit_button = self.browser.find_element_by_xpath("//*[contains(text(), 'Submit application')]")
+    #         elif language == "pt":
+    #             submit_button = self.browser.find_element_by_xpath("//*[contains(text(), 'Enviar candidatura')]")
+    #     submit_button.click()
+    #     time.sleep(random.uniform(1.5, 2.5))
 
     def load_page(self, sleep=1):
         scroll_page = 0
@@ -217,15 +234,6 @@ class EasyApplyBot:
 
 
 if __name__ == '__main__':
-
-    print("\nEasy Apply Bot\n")
-    languages = ["pt", "en"]
-    language = None
-
-    while language not in languages:
-        language = input("LinkedIn language [pt/en]: ")
-        if language not in languages:
-            print("Please, enter a valid language!\n")
-
-    bot = EasyApplyBot(language)
+  
+    bot = EasyApplyBot()
     bot.start_apply()
